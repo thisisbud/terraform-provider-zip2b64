@@ -1,92 +1,162 @@
 package provider
 
 import (
+	"context"
 	"fmt"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
+	"github.com/thisisbud/terraform-provider-zip2b64/client"
 
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-
-	"github.com/ackers-bud/terraform-provider-zip2b64/client"
+	"github.com/hashicorp/terraform-plugin-framework/resource"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
 
-func resourcezip2b64() *schema.Resource {
-	return &schema.Resource{
-		Create: Create,
-		Update: Update,
-		Read:   ReadUrl,
-		Delete: Delete,
+var _ resource.Resource = (*zip2b64Resource)(nil)
 
-		Schema: map[string]*schema.Schema{
-			"base64file": {
-				Type:     schema.TypeString,
-				Required: true,
-			},
+type zip2b64Resource struct {
+	provider zip2b64Provider //nolint:unused
+}
 
-			"filename": {
-				Description: "the filename",
-				Type:        schema.TypeString,
-				Required:    true,
-			},
+func NewResource() resource.Resource {
+	return &zip2b64Resource{}
+}
 
-			"id": {
-				Description: "The ID of this resource.",
-				Type:        schema.TypeString,
-				Computed:    true,
-			},
+func (e *zip2b64Resource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
+	resp.TypeName = req.ProviderTypeName + "_resource"
+}
 
-			"filecontents_base64": {
-				Description: "The Returned body base64 encoded",
-				Type:        schema.TypeString,
-				Computed:    true,
+func (e *zip2b64Resource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
+	resp.Schema = schema.Schema{
+		Attributes: map[string]schema.Attribute{
+			"id": schema.StringAttribute{
+				Computed: true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
+			"filename":             schema.StringAttribute{},
+			"response_body_base64": schema.StringAttribute{},
+			"filecontents_base64":  schema.StringAttribute{},
 		},
 	}
 }
 
-func Create(d *schema.ResourceData, meta interface{}) error {
+type zip2b64ResourceData struct {
+	Id                 types.String `tfsdk:"id"`
+	Filename           types.String `tfsdk:"filename"`
+	Base64File         types.String `tfsdk:"base64file"`
+	FileContentsBase64 types.String `tfsdk:"filecontents_base64"`
+}
 
-	base64file := d.Get("base64file").(string)
-	filenameToExtract := d.Get("filename").(string)
+func (e *zip2b64Resource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
+	var data zip2b64ResourceData
+
+	diags := req.Config.Get(ctx, &data)
+	resp.Diagnostics.Append(diags...)
+
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	base64file := data.Base64File.String()
+	filenameToExtract := data.Filename.String()
 
 	filecontentsBase64, err := client.ZipExtract(base64file, filenameToExtract)
 	if err != nil {
-		return fmt.Errorf("error extracting file '%s' from base64 string error: '%v'", filenameToExtract, err)
+		//return fmt.Errorf("error Getting resource '%v'", err)
+		resp.Diagnostics.AddError(
+			"Error extracting zip",
+			fmt.Sprintf("... details ... %s", err),
+		)
+		return
 	}
 
-	err = d.Set("filecontents_base64", filecontentsBase64)
-	if err != nil {
-		return fmt.Errorf("error setting filecontents_base64 '%v'", err)
-	}
+	data.Id = types.StringValue(filenameToExtract)
+	data.Filename = types.StringValue(filenameToExtract)
+	data.Base64File = types.StringValue(base64file)
+	data.FileContentsBase64 = types.StringValue(filecontentsBase64)
 
-	d.SetId(filenameToExtract)
-	return nil
+	tflog.Trace(ctx, "created a resource")
+
+	diags = resp.State.Set(ctx, &data)
+	resp.Diagnostics.Append(diags...)
 }
 
-func Update(d *schema.ResourceData, meta interface{}) error {
+func (e *zip2b64Resource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
+	var data zip2b64ResourceData
 
-	base64file := d.Get("base64file").(string)
-	filenameToExtract := d.Get("filename").(string)
+	diags := req.State.Get(ctx, &data)
+	resp.Diagnostics.Append(diags...)
+
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	base64file := data.Base64File.String()
+	filenameToExtract := data.Filename.String()
 
 	filecontentsBase64, err := client.ZipExtract(base64file, filenameToExtract)
 	if err != nil {
-		return fmt.Errorf("error extracting file '%s' from base64 string error: '%v'", filenameToExtract, err)
+		//return fmt.Errorf("error Getting resource '%v'", err)
+		resp.Diagnostics.AddError(
+			"Error extracting zip",
+			fmt.Sprintf("... details ... %s", err),
+		)
+		return
 	}
 
-	err = d.Set("filecontents_base64", filecontentsBase64)
+	data.Id = types.StringValue(filenameToExtract)
+	data.Filename = types.StringValue(filenameToExtract)
+	data.Base64File = types.StringValue(base64file)
+	data.FileContentsBase64 = types.StringValue(filecontentsBase64)
+
+	diags = resp.State.Set(ctx, &data)
+	resp.Diagnostics.Append(diags...)
+}
+
+func (e *zip2b64Resource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
+	var data zip2b64ResourceData
+
+	diags := req.Plan.Get(ctx, &data)
+	resp.Diagnostics.Append(diags...)
+
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	base64file := data.Base64File.String()
+	filenameToExtract := data.Filename.String()
+
+	filecontentsBase64, err := client.ZipExtract(base64file, filenameToExtract)
 	if err != nil {
-		return fmt.Errorf("error setting filecontents_base64 '%v'", err)
+		//return fmt.Errorf("error Getting resource '%v'", err)
+		resp.Diagnostics.AddError(
+			"Error extracting zip",
+			fmt.Sprintf("... details ... %s", err),
+		)
+		return
 	}
 
-	d.SetId(filenameToExtract)
-	return nil
+	data.Id = types.StringValue(filenameToExtract)
+	data.Filename = types.StringValue(filenameToExtract)
+	data.Base64File = types.StringValue(base64file)
+	data.FileContentsBase64 = types.StringValue(filecontentsBase64)
+
+	diags = resp.State.Set(ctx, &data)
+	resp.Diagnostics.Append(diags...)
 }
 
-func ReadUrl(d *schema.ResourceData, meta interface{}) error {
+func (e *zip2b64Resource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
+	var data zip2b64ResourceData
 
-	return nil
-}
+	diags := req.State.Get(ctx, &data)
+	resp.Diagnostics.Append(diags...)
 
-func Delete(d *schema.ResourceData, meta interface{}) error {
+	if resp.Diagnostics.HasError() {
+		return
+	}
 
-	d.SetId("")
-	return nil
+	// Delete resource using 3rd party API.
 }
