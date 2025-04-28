@@ -1,6 +1,8 @@
 module github.com/ackers-bud/terraform-provider-zip2b64
 
-go 1.18
+go 1.21
+
+toolchain go1.24.0
 
 require github.com/hashicorp/terraform-plugin-sdk/v2 v2.34.0
 
