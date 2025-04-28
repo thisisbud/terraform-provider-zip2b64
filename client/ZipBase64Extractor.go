@@ -5,7 +5,7 @@ import (
 	"bytes"
 	"encoding/base64"
 	"errors"
-	"io/ioutil"
+	"io"
 	"strings"
 )
 
@@ -37,7 +37,7 @@ func ZipExtract(base64Encodedfile string, filenameToExtract string) (string, err
 				return "", err
 			}
 
-			SinglefileContentsBytes, err := ioutil.ReadAll(SinglefileContents)
+			SinglefileContentsBytes, err := io.ReadAll(SinglefileContents)
 			if err != nil {
 				return "", err
 			}
