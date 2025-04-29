@@ -72,8 +72,8 @@ func (e *zip2b64Resource) Create(ctx context.Context, req resource.CreateRequest
 		return
 	}
 
-	base64file := data.Base64File.String()
-	filenameToExtract := data.Filename.String()
+	base64file := data.Base64File.ValueString()
+	filenameToExtract := data.Filename.ValueString()
 
 	filecontentsBase64, err := client.ZipExtract(base64file, filenameToExtract)
 	if err != nil {
@@ -106,8 +106,8 @@ func (e *zip2b64Resource) Read(ctx context.Context, req resource.ReadRequest, re
 		return
 	}
 
-	base64file := data.Base64File.String()
-	filenameToExtract := data.Filename.String()
+	base64file := data.Base64File.ValueString()
+	filenameToExtract := data.Filename.ValueString()
 
 	filecontentsBase64, err := client.ZipExtract(base64file, filenameToExtract)
 	if err != nil {
@@ -138,8 +138,8 @@ func (e *zip2b64Resource) Update(ctx context.Context, req resource.UpdateRequest
 		return
 	}
 
-	base64file := data.Base64File.String()
-	filenameToExtract := data.Filename.String()
+	base64file := data.Base64File.ValueString()
+	filenameToExtract := data.Filename.ValueString()
 
 	filecontentsBase64, err := client.ZipExtract(base64file, filenameToExtract)
 	if err != nil {
