@@ -43,10 +43,12 @@ func (e *zip2b64Resource) Schema(ctx context.Context, req resource.SchemaRequest
 				},
 			},
 			"base64file": schema.StringAttribute{
-				Required: true,
+				Required:  true,
+				Sensitive: true,
 			},
 			"filecontents_base64": schema.StringAttribute{
-				Computed: true,
+				Computed:  true,
+				Sensitive: true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
 				},
